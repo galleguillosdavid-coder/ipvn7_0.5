@@ -111,6 +111,8 @@ func main() {
 	mcpServer.AttachHybridCrypto(webServer.HybridKeys, webServer.Sphinx)
 	mcpServer.AttachLegacyRescues(webServer.SOCKS5, webServer.Guardian)
 	mcpServer.AttachUINStack(webServer.UIN, webServer.MemoryArbiter, webServer.Hierarchy)
+	mcpServer.AttachSenateAndSentinel(webServer.Constitution, webServer.Senate, webServer.Sentinel)
+	mcpServer.AttachLawEngine(webServer.LawEngine)
 
 	// Si se invoca con flag --mcp, toma el control directo de stdio para el agente IA
 	if *mcpMode {

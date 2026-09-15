@@ -24,6 +24,7 @@ Bienvenido al centro de documentación técnica del proyecto **ipvn7 Network OS*
   * **[Historial de Diseño - Fase 1](HISTORIAL_DISENO_1.md)** (`docs/1.md`): Registro exhaustivo de la concepción y especificación de las virtudes originales del protocolo.
   * **[Historial de Diseño - Fase 2](HISTORIAL_DISENO_2.md)** (`docs/2.md`): Sesión de síntesis arquitectónica y nacimiento del Ecosistema AFE-Kùzu.
   * **[Historial de Diseño - Fase 3](3.md)** (`docs/3.md`): Ciber-República, Democracia Líquida entre Agentes IA, Constitución Digital y Centinelas Celulares.
+  * **[Historial de Diseño - Fase 4](4.md)** (`docs/4.md`): Gobernanza Multinivel, Gramática Institucional ADICO y Derecho Computable (Lex Superior, Lex Specialis, Lex Posterior).
 
 * 💻 **[Código Fuente y Módulos Clave](../pkg/)**
   * `pkg/l0/`: Criptografía Fortress (Noise XX, PQC Kyber, Ed25519, CBOR) **[STRICT CORE FREEZE]**.

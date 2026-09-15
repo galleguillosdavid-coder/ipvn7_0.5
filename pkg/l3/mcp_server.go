@@ -71,6 +71,7 @@ type MCPServer struct {
 	Constitution   *ConstitutionalVerifier
 	Senate         *AgentSenateEngine
 	Sentinel       *l2.SentinelImmunologyEngine
+	LawEngine      *ComputationalLawEngine
 	StartTime      time.Time
 	mu             sync.Mutex
 }
@@ -92,6 +93,13 @@ func (s *MCPServer) AttachSenateAndSentinel(constVerifier *ConstitutionalVerifie
 	s.Constitution = constVerifier
 	s.Senate = senate
 	s.Sentinel = sentinel
+}
+
+// AttachLawEngine enlaza el motor de Derecho Computable y resolución de antinomias (docs/4.md)
+func (s *MCPServer) AttachLawEngine(law *ComputationalLawEngine) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.LawEngine = law
 }
 
 // AttachLegacyRescues enlaza los componentes rescatados de D:\David (SOCKS5, Guardian)
@@ -506,6 +514,79 @@ func (s *MCPServer) GetSupportedTools() []MCPTool {
 					},
 				},
 				"required": []string{"incident", "offender_did", "evidence"},
+			},
+		},
+		{
+			Name:        "ipvn7_law_validate_rule",
+			Description: "Valida y registra una norma ADICO en el motor de Derecho Computable (docs/4.md), verificando antinomias y precedencia Lex Superior / Specialis / Posterior",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"rule_id": map[string]interface{}{
+						"type":        "string",
+						"description": "Identificador único de la norma (opcional, generado automáticamente si se omite)",
+					},
+					"context_domain": map[string]interface{}{
+						"type":        "string",
+						"description": "Dominio de contexto o jurisdicción (e.g. 'root', 'subred.edu.ipv7', 'market.p2p.ipv7')",
+					},
+					"attribute": map[string]interface{}{
+						"type":        "string",
+						"description": "Sujeto de la norma o rol afectado (e.g. 'all_nodes', 'civic_agent', 'transit_node')",
+					},
+					"deontic": map[string]interface{}{
+						"type":        "string",
+						"description": "Operador deóntico formal: 'OBLIGATION' (deber), 'PERMISSION' (facultad), 'PROHIBITION' (vedado)",
+					},
+					"aim": map[string]interface{}{
+						"type":        "string",
+						"description": "Acción semántica regulada u objetivo institucional",
+					},
+					"condition": map[string]interface{}{
+						"type":        "string",
+						"description": "Condición o circunstancia de aplicación lógica de la norma",
+					},
+					"or_else": map[string]interface{}{
+						"type":        "string",
+						"description": "Sanción o consecuencia graduada ante incumplimiento",
+					},
+					"priority": map[string]interface{}{
+						"type":        "number",
+						"description": "Nivel de prioridad jerárquico (100 = Constitucional, 50 = Sectorial, 10 = Comunitario)",
+					},
+				},
+				"required": []string{"context_domain", "attribute", "deontic", "aim"},
+			},
+		},
+		{
+			Name:        "ipvn7_law_evaluate_action",
+			Description: "Evalúa si una acción planificada por una entidad o agente IA está permitida, obligada o prohibida según la jerarquía normativa",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"context_domain": map[string]interface{}{
+						"type":        "string",
+						"description": "Dominio contextual o jurisdicción en la que se ejecuta la acción (e.g. 'root', 'subred.edu.ipv7')",
+					},
+					"action": map[string]interface{}{
+						"type":        "string",
+						"description": "Acción semántica que se desea evaluar",
+					},
+				},
+				"required": []string{"context_domain", "action"},
+			},
+		},
+		{
+			Name:        "ipvn7_law_list_rules",
+			Description: "Lista las directivas institucionales y normas ADICO vigentes en una jurisdicción o en todo el ordenamiento de ipvn7",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"context_domain": map[string]interface{}{
+						"type":        "string",
+						"description": "Filtro opcional por dominio de contexto (e.g. 'root', 'subred.edu.ipv7'). Si se omite, retorna todas",
+					},
+				},
 			},
 		},
 	}
@@ -1107,6 +1188,76 @@ func (s *MCPServer) ExecuteTool(name string, args map[string]interface{}) (strin
 			return "", fmt.Errorf("error emitiendo alerta inmunológica: %w", err)
 		}
 		data, _ := json.MarshalIndent(alert, "", "  ")
+		return string(data), nil
+
+	case "ipvn7_law_validate_rule":
+		if s.LawEngine == nil {
+			return "", fmt.Errorf("motor de Derecho Computable no inicializado")
+		}
+		ctxDomain, _ := args["context_domain"].(string)
+		attr, _ := args["attribute"].(string)
+		deonticStr, _ := args["deontic"].(string)
+		aim, _ := args["aim"].(string)
+		cond, _ := args["condition"].(string)
+		orElse, _ := args["or_else"].(string)
+		ruleID, _ := args["rule_id"].(string)
+		prioFloat, _ := args["priority"].(float64)
+
+		if ctxDomain == "" || attr == "" || deonticStr == "" || aim == "" {
+			return "", fmt.Errorf("parámetros 'context_domain', 'attribute', 'deontic' y 'aim' son obligatorios")
+		}
+
+		rule := ADICORule{
+			ID:            ruleID,
+			ContextDomain: ctxDomain,
+			Attribute:     attr,
+			Deontic:       DeonticOp(deonticStr),
+			Aim:           aim,
+			Condition:     cond,
+			OrElse:        orElse,
+			Priority:      int(prioFloat),
+		}
+
+		registered, err := s.LawEngine.RegisterRule(rule)
+		if err != nil {
+			return "", fmt.Errorf("error al validar/registrar regla ADICO: %w", err)
+		}
+		data, _ := json.MarshalIndent(registered, "", "  ")
+		return string(data), nil
+
+	case "ipvn7_law_evaluate_action":
+		if s.LawEngine == nil {
+			return "", fmt.Errorf("motor de Derecho Computable no inicializado")
+		}
+		ctxDomain, _ := args["context_domain"].(string)
+		action, _ := args["action"].(string)
+		if ctxDomain == "" || action == "" {
+			return "", fmt.Errorf("parámetros 'context_domain' y 'action' son obligatorios")
+		}
+		deontic, justification, allowed := s.LawEngine.EvaluateAction(ctxDomain, action)
+		res := map[string]interface{}{
+			"context_domain": ctxDomain,
+			"action":         action,
+			"deontic":        deontic,
+			"justification":  justification,
+			"allowed":        allowed,
+		}
+		data, _ := json.MarshalIndent(res, "", "  ")
+		return string(data), nil
+
+	case "ipvn7_law_list_rules":
+		if s.LawEngine == nil {
+			return "", fmt.Errorf("motor de Derecho Computable no inicializado")
+		}
+		filterCtx, _ := args["context_domain"].(string)
+		allRules := s.LawEngine.ListAllRules()
+		filtered := make([]*ADICORule, 0)
+		for _, r := range allRules {
+			if filterCtx == "" || r.ContextDomain == filterCtx {
+				filtered = append(filtered, r)
+			}
+		}
+		data, _ := json.MarshalIndent(filtered, "", "  ")
 		return string(data), nil
 
 	default:

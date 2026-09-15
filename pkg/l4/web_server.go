@@ -64,6 +64,7 @@ type WebDashboardServer struct {
 	Constitution  *l3.ConstitutionalVerifier
 	Senate        *l3.AgentSenateEngine
 	Sentinel      *l2.SentinelImmunologyEngine
+	LawEngine     *l3.ComputationalLawEngine
 	CopilotMode   string
 	StartTime     time.Time
 	StaticDir     string
@@ -119,6 +120,7 @@ func NewWebDashboardServer(
 	constVerifier := l3.NewConstitutionalVerifier(id)
 	senate := l3.NewAgentSenateEngine(id, constVerifier, dagStore, wot, accounting)
 	sentinel := l2.NewSentinelImmunologyEngine(id, fw, accounting, wot)
+	lawEngine := l3.NewComputationalLawEngine(id)
 
 	// Pre-cargar propuesta de demostración inicial en el Senado de Agentes
 	demoCode := `package main
@@ -174,6 +176,7 @@ func optimizeHop() { /* 0 alocaciones */ }`
 		Constitution:  constVerifier,
 		Senate:        senate,
 		Sentinel:      sentinel,
+		LawEngine:     lawEngine,
 		CopilotMode:   "off",
 		StartTime:     time.Now(),
 		StaticDir:     staticDir,
@@ -313,6 +316,8 @@ func (ws *WebDashboardServer) Start() error {
 	mux.HandleFunc("/api/sentinel/audit", ws.handleSentinelAudit)
 	mux.HandleFunc("/api/sentinel/alerts", ws.handleSentinelAlerts)
 	mux.HandleFunc("/api/sentinel/report", ws.handleSentinelReport)
+	mux.HandleFunc("/api/law/rules", ws.handleLawRules)
+	mux.HandleFunc("/api/law/evaluate", ws.handleLawEvaluate)
 
 	// 2. Archivos estáticos de interfaz gráfica
 	fs := http.FileServer(http.Dir(ws.StaticDir))
@@ -2544,6 +2549,93 @@ func (ws *WebDashboardServer) handleSentinelReport(w http.ResponseWriter, r *htt
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"alert":   alert,
+	})
+}
+
+func (ws *WebDashboardServer) handleLawRules(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if r.Method == http.MethodPost {
+		var req struct {
+			ID            string `json:"id"`
+			ContextDomain string `json:"context_domain"`
+			Attribute     string `json:"attribute"`
+			Deontic       string `json:"deontic"`
+			Aim           string `json:"aim"`
+			Condition     string `json:"condition"`
+			OrElse        string `json:"or_else"`
+			Priority      int    `json:"priority"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		rule := l3.ADICORule{
+			ID:            req.ID,
+			ContextDomain: req.ContextDomain,
+			Attribute:     req.Attribute,
+			Deontic:       l3.DeonticOp(req.Deontic),
+			Aim:           req.Aim,
+			Condition:     req.Condition,
+			OrElse:        req.OrElse,
+			Priority:      req.Priority,
+		}
+		registered, err := ws.LawEngine.RegisterRule(rule)
+		if err != nil {
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"error":   err.Error(),
+			})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"rule":    registered,
+		})
+		return
+	}
+
+	// GET: Lista reglas
+	ctxFilter := r.URL.Query().Get("context_domain")
+	all := ws.LawEngine.ListAllRules()
+	filtered := make([]*l3.ADICORule, 0)
+	for _, r := range all {
+		if ctxFilter == "" || r.ContextDomain == ctxFilter {
+			filtered = append(filtered, r)
+		}
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"count":   len(filtered),
+		"rules":   filtered,
+	})
+}
+
+func (ws *WebDashboardServer) handleLawEvaluate(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		ContextDomain string `json:"context_domain"`
+		Action        string `json:"action"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	deontic, justification, allowed := ws.LawEngine.EvaluateAction(req.ContextDomain, req.Action)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":        true,
+		"context_domain": req.ContextDomain,
+		"action":         req.Action,
+		"deontic":        deontic,
+		"justification":  justification,
+		"allowed":        allowed,
 	})
 }
 

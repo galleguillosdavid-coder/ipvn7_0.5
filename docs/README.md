@@ -27,7 +27,7 @@ Bienvenido al centro de documentación técnica del proyecto **ipvn7 Network OS*
 
 * 💻 **[Código Fuente y Módulos Clave](../pkg/)**
   * `pkg/l0/`: Criptografía Fortress (Noise XX, PQC Kyber, Ed25519, CBOR) **[STRICT CORE FREEZE]**.
-  * `pkg/l1/`: Blind Rendezvous (EBRA), Blackout Recovery & Decorrelated Jitter, Corporate Zero-Admin VPN & TLS 1.3 Anti-DPI, Cascade Multicast, ZTNA Firewall, QoS Token Bucket, DAG Store, Buffer Pool, Multipath, Smart Packets.
+  * `pkg/l1/`: Enrutamiento Elástico de N-Anillos Kleinberg & Métrica Híbrida 2D (XOR + EWMA Latencia), Blind Rendezvous (EBRA), Blackout Recovery & Decorrelated Jitter, Corporate Zero-Admin VPN & TLS 1.3 Anti-DPI, Cascade Multicast, ZTNA Firewall, QoS Token Bucket, DAG Store, Buffer Pool, Multipath, Smart Packets.
   * `pkg/l2/`: Ring Buffer lock-free (<28 ns), Contabilidad Tit-for-Tat y Detección de Anomalías.
   * `pkg/l3/`: Servidor MCP JSON-RPC 2.0, Copiloto de IA con Auto-Curación y motor KùzuDB.
   * `pkg/l4/`: Chat Soberano E2EE, Escritorio Remoto P2P, Dashboard Web Server, dDNS Petnames, OOB SAS Pairing.

@@ -132,10 +132,17 @@ func main() {
 		fmt.Printf("Paquetes Rx   : %d\n", snap.PacketsRx)
 		fmt.Printf("Descartes     : %d\n", snap.PacketsDropped)
 		fmt.Printf("Ratio Tit-Tat : %.2f\n", snap.TitForTatRatio)
+		rCfg := router.GetConfig()
+		fmt.Println("\n--- Topología Elástica de Red (N-Anillos) ---")
+		fmt.Printf("Perfil Topológico : %s\n", rCfg.Profile)
+		fmt.Printf("Resolución Anillos: %d anillos logarítmicos\n", rCfg.NumRings)
+		fmt.Printf("Capacidad Pares   : %d máx (%d slots/anillo)\n", rCfg.MaxTotalPeers, rCfg.PeersPerRing)
+		fmt.Printf("Métrica Voraz 2D  : Latencia %.0f%% / XOR %.0f%%\n", rCfg.AlphaLatencyWeight*100, (1.0-rCfg.AlphaLatencyWeight)*100)
 
 	case "peers":
 		peers := router.GetAllPeers()
-		fmt.Printf("=== TABLA DE ENRUTAMIENTO KLEINBERG (%d / 120 slots) ===\n", len(peers))
+		rCfg := router.GetConfig()
+		fmt.Printf("=== TABLA DE ENRUTAMIENTO KLEINBERG (%d / %d slots · Perfil: %s) ===\n", len(peers), rCfg.MaxTotalPeers, rCfg.Profile)
 		if len(peers) == 0 {
 			fmt.Println("(No hay pares remotos conectados en este momento)")
 			return
@@ -185,24 +192,33 @@ func main() {
 		}
 
 	case "radar":
-		fmt.Println("=== RADAR DE ANILLOS CONCÉNTRICOS KLEINBERG ===")
-		fmt.Println(`
-             . - ~ ~ ~ - .
-         . '   Anillo 11   ' .       [Confines del espacio XOR]
-       /       Anillo 08       \
-      /    . - ~ ~ ~ - .        \
-     |   /   Anillo 04   \       |
-     |  |   . - ~ - .     |      |
-     |  |  ( Anillo 00 )  |      |   [Pares inmediatos]
-     |  |   ' - ~ - '     |      |
-     |   \               /       |
-      \    ' - ~ ~ ~ - '        /
-       \                       /
-         ' .               . '
-             ' - ~ ~ ~ - '
-		`)
-		fmt.Printf("Identidad Centro: %s\n", id.DID()[:24]+"...")
-		fmt.Printf("Capacidad máxima de memoria acotada: %d pares\n", l1.MaxPeers)
+		rCfg := router.GetConfig()
+		dist := router.GetRingDistribution()
+		fmt.Printf("=== RADAR DE ANILLOS CONCÉNTRICOS KLEINBERG (%d Anillos · Perfil: %s) ===\n", rCfg.NumRings, rCfg.Profile)
+		fmt.Printf("Identidad Centro: %s\n", id.DID())
+		fmt.Printf("Capacidad Máxima : %d pares (%d slots por anillo)\n\n", rCfg.MaxTotalPeers, rCfg.PeersPerRing)
+
+		fmt.Println("Distribución Topológica por Anillos [0 = Vecindad Local -> N-1 = Confines XOR]:")
+		for i := 0; i < len(dist); i++ {
+			barLen := dist[i] * 3
+			bar := strings.Repeat("█", barLen)
+			if bar == "" {
+				bar = "·"
+			}
+			label := ""
+			if i == 0 {
+				label = " [Inmediato / LAN]"
+			} else if i == len(dist)-1 {
+				label = " [Antípoda XOR]"
+			}
+			fmt.Printf("  Anillo [%02d] (%2d/%2d) |%-24s|%s\n", i, dist[i], rCfg.PeersPerRing, bar, label)
+		}
+		starved := router.RebalanceRings()
+		if len(starved) > 0 {
+			fmt.Printf("\n[i] Anillos despoblados detectados: %d de %d anillos (auto-prospección lista)\n", len(starved), rCfg.NumRings)
+		} else {
+			fmt.Println("\n[+] Topología 100% poblada para saltos logarítmicos O(log N).")
+		}
 
 	case "firewall":
 		fmt.Println("=== CORTAFUEGOS DE MICRO-SEGMENTACIÓN ZTNA (Dimensión 1) ===")

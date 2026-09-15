@@ -3040,3 +3040,369 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+// =============================================================================
+// CIBER-REPÚBLICA, SENADO DE AGENTES Y SISTEMA INMUNOLÓGICO (docs/3.md)
+// =============================================================================
+
+function openSenateModal() {
+  const modal = document.getElementById("senateModal");
+  if (modal) {
+    modal.style.display = "flex";
+    refreshSenateMorningReport();
+    loadSenateProposals();
+  }
+}
+
+function closeSenateModal() {
+  const modal = document.getElementById("senateModal");
+  if (modal) modal.style.display = "none";
+}
+
+function switchSenateTab(tab) {
+  const tMorning = document.getElementById("tabSenateMorning");
+  const tDebates = document.getElementById("tabSenateDebates");
+  const tNew = document.getElementById("tabSenateNew");
+  const cMorning = document.getElementById("senateTabContentMorning");
+  const cDebates = document.getElementById("senateTabContentDebates");
+  const cNew = document.getElementById("senateTabContentNew");
+
+  if (!tMorning) return;
+  tMorning.classList.remove("active");
+  tDebates.classList.remove("active");
+  tNew.classList.remove("active");
+  cMorning.style.display = "none";
+  cDebates.style.display = "none";
+  cNew.style.display = "none";
+
+  if (tab === "morning") {
+    tMorning.classList.add("active");
+    cMorning.style.display = "block";
+    refreshSenateMorningReport();
+  } else if (tab === "debates") {
+    tDebates.classList.add("active");
+    cDebates.style.display = "block";
+    loadSenateProposals();
+  } else if (tab === "new") {
+    tNew.classList.add("active");
+    cNew.style.display = "block";
+  }
+}
+
+async function refreshSenateMorningReport() {
+  const list = document.getElementById("morningDecisionsList");
+  const head = document.getElementById("morningReportHeadline");
+  if (!list) return;
+
+  try {
+    const res = await fetch("/api/senate/morning-report");
+    if (res.ok) {
+      const data = await res.json();
+      const rep = data.report;
+      if (head) {
+        head.textContent = `Reporte Matutino del Agente · ${rep.date || "Hoy"} (${rep.votes_cast_by_agent} Votos emitidos)`;
+      }
+      if (!rep.decisions || rep.decisions.length === 0) {
+        list.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted); background: rgba(0,0,0,0.2); border-radius: 8px;">
+          No hay decisiones registradas aún en este ciclo. El agente está monitoreando la malla.
+        </div>`;
+        return;
+      }
+      list.innerHTML = rep.decisions.map(d => {
+        const isVetoed = d.vetoed;
+        const stanceColor = d.agent_stance === "SUPPORT" ? "#10b981" : d.agent_stance === "OPPOSE" ? "#ef4444" : "#f59e0b";
+        return `
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid ${isVetoed ? '#ef4444' : 'rgba(255,255,255,0.08)'}; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+            <div style="flex: 1;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span style="font-weight: 600; color: #fff; font-size: 0.88rem;">${escapeHtml(d.title)}</span>
+                <span class="badge" style="background: ${stanceColor}22; color: ${stanceColor}; font-size: 0.7rem; padding: 2px 6px;">VOTO: ${d.agent_stance}</span>
+                <span class="badge" style="background: rgba(0,240,255,0.15); color: #00f0ff; font-size: 0.68rem;">PoC Score: ${d.weight_used.toFixed(1)}</span>
+                ${d.constitutional_valid ? '<span style="font-size: 0.7rem; color: #10b981;">✓ Conforme Art. I</span>' : '<span style="font-size: 0.7rem; color: #ef4444;">✗ No Certificado</span>'}
+              </div>
+              <p style="font-size: 0.78rem; color: var(--text-muted); margin: 0;">${escapeHtml(d.justification)}</p>
+            </div>
+            <div>
+              ${isVetoed ? 
+                '<span class="badge" style="background: rgba(239,68,68,0.2); color: #ef4444; font-size: 0.74rem;">VETADO POR TI ✓</span>' : 
+                `<button class="btn-primary btn-det" onclick="executeSovereignVeto('${d.proposal_id}')" style="border-color: #ef4444; color: #ef4444; font-size: 0.72rem; padding: 4px 10px;">Veto Soberano</button>`}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+  } catch (err) {
+    console.warn("Error cargando reporte matutino:", err);
+  }
+}
+
+async function executeSovereignVeto(proposalID) {
+  const reason = prompt("Indica el motivo del Veto Soberano Humano (inalienable):", "Preferencia preventiva del usuario humano");
+  if (!reason) return;
+
+  try {
+    const res = await fetch("/api/senate/veto", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ proposal_id: proposalID, reason: reason })
+    });
+    if (res.ok) {
+      alert("✓ Veto Soberano Humano aplicado. El voto de tu agente ha sido anulado del consenso de la red.");
+      refreshSenateMorningReport();
+      loadSenateProposals();
+    }
+  } catch (err) {
+    alert("Error aplicando veto: " + err);
+  }
+}
+
+async function loadSenateProposals() {
+  const list = document.getElementById("senateProposalsList");
+  if (!list) return;
+
+  try {
+    const res = await fetch("/api/senate/proposals");
+    if (res.ok) {
+      const data = await res.json();
+      const props = data.proposals || [];
+      if (props.length === 0) {
+        list.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted);">No hay propuestas activas en el Ágora.</div>`;
+        return;
+      }
+      list.innerHTML = props.map(p => {
+        const total = (p.support_weight || 0) + (p.oppose_weight || 0);
+        const supportPct = total > 0 ? ((p.support_weight / total) * 100).toFixed(0) : 50;
+        const statusColor = p.status === "APPROVED" ? "#10b981" : p.status === "REJECTED" || p.status === "VETOED_BY_SOVEREIGN" ? "#ef4444" : "#c084fc";
+        return `
+          <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+              <div>
+                <strong style="color: #fff; font-size: 0.95rem;">${escapeHtml(p.title)}</strong>
+                <span class="badge" style="background: rgba(168,85,247,0.15); color: #c084fc; font-size: 0.68rem; margin-left: 6px;">${p.category}</span>
+                <span class="badge" style="background: ${statusColor}22; color: ${statusColor}; font-size: 0.68rem; margin-left: 4px;">${p.status}</span>
+              </div>
+              <span style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted);">${p.id}</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin: 4px 0 10px 0;">${escapeHtml(p.description)}</p>
+            
+            <!-- Barra de Consenso de Voto -->
+            <div style="background: rgba(0,0,0,0.4); border-radius: 4px; height: 8px; overflow: hidden; display: flex; margin-bottom: 8px;">
+              <div style="width: ${supportPct}%; background: #10b981;" title="Soporte: ${p.support_weight || 0} pts"></div>
+              <div style="width: ${100 - supportPct}%; background: #ef4444;" title="Oposición: ${p.oppose_weight || 0} pts"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--text-muted); margin-bottom: 10px;">
+              <span style="color: #10b981;">Apoyo: ${(p.support_weight || 0).toFixed(1)} pts</span>
+              <span>Total Ponderado: ${total.toFixed(1)} pts</span>
+              <span style="color: #ef4444;">Oposición: ${(p.oppose_weight || 0).toFixed(1)} pts</span>
+            </div>
+
+            <!-- Botones de Voto Rápido -->
+            <div style="display: flex; justify-content: flex-end; gap: 8px;">
+              <button class="btn-primary btn-det" onclick="castVoteFromUI('${p.id}', 'SUPPORT')" style="font-size: 0.72rem; border-color: #10b981; color: #10b981; padding: 3px 8px;">Votar A Favor</button>
+              <button class="btn-primary btn-det" onclick="castVoteFromUI('${p.id}', 'OPPOSE')" style="font-size: 0.72rem; border-color: #ef4444; color: #ef4444; padding: 3px 8px;">Votar En Contra</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+  } catch (err) {
+    console.warn("Error cargando propuestas:", err);
+  }
+}
+
+async function castVoteFromUI(propID, stance) {
+  const just = prompt(`Justificación semántica de tu voto (${stance}):`, "Voto emitido por convicción técnica");
+  if (!just) return;
+
+  try {
+    const res = await fetch("/api/senate/vote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ proposal_id: propID, stance: stance, justification: just })
+    });
+    if (res.ok) {
+      alert("✓ Voto registrado y firmado con tu Proof-of-Contribution");
+      loadSenateProposals();
+      refreshSenateMorningReport();
+    }
+  } catch (err) {
+    alert("Error emitiendo voto: " + err);
+  }
+}
+
+async function submitSenateProposal() {
+  const title = document.getElementById("newPropTitle").value.trim();
+  const cat = document.getElementById("newPropCategory").value;
+  const desc = document.getElementById("newPropDesc").value.trim();
+  const code = document.getElementById("newPropCode").value.trim();
+  const resBox = document.getElementById("newPropResultMsg");
+
+  if (!title || !code) {
+    alert("Ingresa título y código fuente.");
+    return;
+  }
+  resBox.innerHTML = '<span style="color: #00f0ff;">⏳ Auditando contra el Artículo I de la Constitución...</span>';
+
+  try {
+    const res = await fetch("/api/senate/proposals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description: desc, category: cat, source_code: code })
+    });
+    const data = await res.json();
+    if (data.success) {
+      resBox.innerHTML = `<span style="color: #10b981;">✓ PROPUESTA APROBADA Y DIFUNDIDA EN EL SENADO. ID: ${data.proposal.id}</span>`;
+      document.getElementById("newPropTitle").value = "";
+      document.getElementById("newPropDesc").value = "";
+      document.getElementById("newPropCode").value = "";
+      setTimeout(() => switchSenateTab('debates'), 1200);
+    } else {
+      resBox.innerHTML = `<span style="color: #ef4444;">✗ RECHAZO CONSTITUCIONAL: ${escapeHtml(data.error)}</span>`;
+    }
+  } catch (err) {
+    resBox.innerHTML = `<span style="color: #ef4444;">Error enviando propuesta: ${err}</span>`;
+  }
+}
+
+// =============================================================================
+// SISTEMA INMUNOLÓGICO Y CENTINELAS (docs/3.md)
+// =============================================================================
+
+function openSentinelModal() {
+  const modal = document.getElementById("sentinelModal");
+  if (modal) {
+    modal.style.display = "flex";
+    loadSentinelData();
+  }
+}
+
+function closeSentinelModal() {
+  const modal = document.getElementById("sentinelModal");
+  if (modal) modal.style.display = "none";
+}
+
+async function loadSentinelData() {
+  try {
+    const res = await fetch("/api/sentinel/status");
+    if (res.ok) {
+      const data = await res.json();
+      const st = data.stats;
+      const act = document.getElementById("sentinelActiveCount");
+      const aud = document.getElementById("sentinelTotalAudits");
+      const alt = document.getElementById("sentinelAlertsCount");
+      const neu = document.getElementById("sentinelNeutralizedCount");
+      const bannedBox = document.getElementById("sentinelBannedList");
+      const alertList = document.getElementById("sentinelAlertsList");
+
+      if (act) act.textContent = `${st.active_sentinels} Célula Activa`;
+      if (aud) aud.textContent = st.total_audits_executed;
+      if (alt) alt.textContent = `${st.total_alerts_emitted} (Quórum: ${st.quorum_threshold})`;
+      if (neu) neu.textContent = st.neutralized_dids.length;
+
+      if (bannedBox) {
+        if (!st.neutralized_dids || st.neutralized_dids.length === 0) {
+          bannedBox.innerHTML = "Ninguna identidad maliciosa neutralizada hasta el momento. Red en estado puro.";
+          bannedBox.style.color = "#10b981";
+        } else {
+          bannedBox.innerHTML = st.neutralized_dids.map(did => `<div>🚫 [SLASHED]: ${escapeHtml(did)} (Default-Deny Permanente)</div>`).join("");
+          bannedBox.style.color = "#ef4444";
+        }
+      }
+
+      if (alertList) {
+        const alerts = data.alerts || [];
+        if (alerts.length === 0) {
+          alertList.innerHTML = `<div style="padding: 10px; color: var(--text-muted); font-size: 0.78rem;">No hay alertas inmunológicas activas. Malla limpia.</div>`;
+        } else {
+          alertList.innerHTML = alerts.map(a => `
+            <div style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; padding: 10px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span class="badge" style="background: #ef444422; color: #ef4444; font-size: 0.7rem;">${a.incident}</span>
+                <span style="font-size: 0.7rem; color: var(--text-muted);">${a.alert_id}</span>
+              </div>
+              <div style="font-size: 0.76rem; color: #fff; margin-bottom: 4px;">Agresor: <code>${a.offender_did}</code></div>
+              <div style="font-size: 0.72rem; color: var(--text-muted);">Evidencia: ${escapeHtml(a.evidence_payload)}</div>
+              <div style="margin-top: 6px; font-size: 0.7rem; color: ${a.slashed ? '#ef4444' : '#f59e0b'};">
+                ${a.slashed ? '⚡ SLASHING EJECUTADO: Expulsado de por vida' : `Firmas acumuladas: ${Object.keys(a.signatures || {}).length} / Quórum: 2`}
+              </div>
+            </div>
+          `).join("");
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Error cargando estado de centinelas:", err);
+  }
+}
+
+async function executeSentinelAudit() {
+  const input = document.getElementById("targetAuditDID");
+  const resBox = document.getElementById("sentinelAuditResult");
+  const target = input ? input.value.trim() : "";
+  if (!target) {
+    alert("Ingresa el DID del nodo a auditar");
+    return;
+  }
+  resBox.innerHTML = '<span style="color: #00f0ff;">⏳ Emitiendo desafío criptográfico de sandbox...</span>';
+
+  try {
+    const res = await fetch("/api/sentinel/audit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_did: target })
+    });
+    const data = await res.json();
+    if (data.success) {
+      resBox.innerHTML = `<span style="color: #10b981;">✓ DESAFÍO EMITIDO: ID ${data.challenge.challenge_id} · Hash Esperado: ${data.challenge.expected_sandbox_hash.substring(0, 16)}...</span>`;
+      loadSentinelData();
+    } else {
+      resBox.innerHTML = `<span style="color: #ef4444;">Error en auditoría: ${escapeHtml(data.error)}</span>`;
+    }
+  } catch (err) {
+    resBox.innerHTML = `<span style="color: #ef4444;">Error de red: ${err}</span>`;
+  }
+}
+
+// =============================================================================
+// CONSTITUCIÓN DIGITAL (docs/3.md)
+// =============================================================================
+
+function openConstitutionModal() {
+  const modal = document.getElementById("constitutionModal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeConstitutionModal() {
+  const modal = document.getElementById("constitutionModal");
+  if (modal) modal.style.display = "none";
+}
+
+async function testConstitutionVerifier() {
+  const code = document.getElementById("constTestCodeInput").value;
+  const resBox = document.getElementById("constTestResultBox");
+  if (!code.trim()) {
+    alert("Pega un fragmento de código para auditar");
+    return;
+  }
+  resBox.innerHTML = '<span style="color: #00f0ff;">⏳ Ejecutando análisis estático de reglas constitucionales...</span>';
+
+  try {
+    const res = await fetch("/api/constitution/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: code, target_id: "test-eval-code" })
+    });
+    const data = await res.json();
+    if (data.success && data.report) {
+      const rep = data.report;
+      if (rep.certified) {
+        resBox.innerHTML = `<span style="color: #10b981; font-weight: 600;">✓ CERTIFICADO CONSTITUCIONAL EMITIDO (Firma Ed25519: ${rep.signature_hex.substring(0, 16)}...):</span><br>El código respeta íntegramente el Artículo I (Privacidad, Cero Telemetría, Anti-Plutocracia y Core Freeze L0).`;
+      } else {
+        const viols = rep.violations.map(v => `• Cláusula ${v.clause_number} (${v.severity}): ${v.description} [Evidencia: ${v.evidence}]`).join("<br>");
+        resBox.innerHTML = `<span style="color: #ef4444; font-weight: 600;">✗ VIOLACIÓN CONSTITUCIONAL DETECTADA:</span><br>${viols}`;
+      }
+    }
+  } catch (err) {
+    resBox.innerHTML = `<span style="color: #ef4444;">Error en verificación: ${err}</span>`;
+  }
+}
+

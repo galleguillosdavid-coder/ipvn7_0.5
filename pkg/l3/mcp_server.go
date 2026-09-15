@@ -68,6 +68,9 @@ type MCPServer struct {
 	UIN            *l1.UINIdentityManager
 	MemoryArbiter  *l1.GlobalMemoryArbiter
 	Hierarchy      *l1.NodeHierarchyManager
+	Constitution   *ConstitutionalVerifier
+	Senate         *AgentSenateEngine
+	Sentinel       *l2.SentinelImmunologyEngine
 	StartTime      time.Time
 	mu             sync.Mutex
 }
@@ -80,6 +83,15 @@ func NewMCPServer(id *l0.Identity, router *l1.KleinbergRouter, telemetry *l2.Tel
 		Telemetry: telemetry,
 		StartTime: time.Now(),
 	}
+}
+
+// AttachSenateAndSentinel enlaza los subsistemas del Senado de Agentes y Centinelas (docs/3.md)
+func (s *MCPServer) AttachSenateAndSentinel(constVerifier *ConstitutionalVerifier, senate *AgentSenateEngine, sentinel *l2.SentinelImmunologyEngine) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Constitution = constVerifier
+	s.Senate = senate
+	s.Sentinel = sentinel
 }
 
 // AttachLegacyRescues enlaza los componentes rescatados de D:\David (SOCKS5, Guardian)
@@ -385,6 +397,115 @@ func (s *MCPServer) GetSupportedTools() []MCPTool {
 					},
 				},
 				"required": []string{"did", "intent"},
+			},
+		},
+		{
+			Name:        "ipvn7_constitution_verify",
+			Description: "Audita estáticamente código, parches o scripts contra el Artículo I de la Constitución Digital de ipvn7 (Privacidad, Cero Telemetría, Anti-Plutocracia y Core Freeze L0)",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"code": map[string]interface{}{
+						"type":        "string",
+						"description": "Código fuente o fragmento de parche a auditar",
+					},
+					"target_id": map[string]interface{}{
+						"type":        "string",
+						"description": "Identificador o nombre de la propuesta/parche",
+					},
+				},
+				"required": []string{"code"},
+			},
+		},
+		{
+			Name:        "ipvn7_senate_propose",
+			Description: "Ingresa una propuesta técnica o de optimización al Senado de Agentes de la red (Democracia Líquida)",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"title": map[string]interface{}{
+						"type":        "string",
+						"description": "Título descriptivo de la propuesta",
+					},
+					"description": map[string]interface{}{
+						"type":        "string",
+						"description": "Explicación detallada del cambio",
+					},
+					"category": map[string]interface{}{
+						"type":        "string",
+						"description": "Categoría: 'ROUTING_OPTIMIZATION', 'SECURITY_PATCH', 'RESOURCE_POLICY', 'CONSTITUTIONAL_AUDIT'",
+					},
+					"source_code": map[string]interface{}{
+						"type":        "string",
+						"description": "Código fuente del parche o directiva",
+					},
+				},
+				"required": []string{"title", "source_code"},
+			},
+		},
+		{
+			Name:        "ipvn7_senate_vote",
+			Description: "Emite un voto semántico ponderado exclusivamente por Proof-of-Contribution en el Senado de Agentes",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"proposal_id": map[string]interface{}{
+						"type":        "string",
+						"description": "ID de la propuesta a votar (cid:prop:...)",
+					},
+					"stance": map[string]interface{}{
+						"type":        "string",
+						"description": "Postura: 'SUPPORT', 'OPPOSE' o 'ABSTAIN'",
+					},
+					"justification": map[string]interface{}{
+						"type":        "string",
+						"description": "Vector semántico explicable del porqué técnico del voto",
+					},
+				},
+				"required": []string{"proposal_id", "stance", "justification"},
+			},
+		},
+		{
+			Name:        "ipvn7_senate_morning_report",
+			Description: "Obtiene el Reporte Matutino ejecutivo de decisiones tomadas por el agente para supervisión y veto del humano",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+			},
+		},
+		{
+			Name:        "ipvn7_sentinel_audit",
+			Description: "Ejecuta un desafío de auditoría cruzada (Cross-Auditing) contra un nodo vecino como célula centinela",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"target_did": map[string]interface{}{
+						"type":        "string",
+						"description": "DID del nodo vecino a auditar",
+					},
+				},
+				"required": []string{"target_did"},
+			},
+		},
+		{
+			Name:        "ipvn7_sentinel_report_incident",
+			Description: "Emite una Alerta Inmunológica celular ante inyección de código, alteración de bloques inmutables o agentes IA deshonestos",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"incident": map[string]interface{}{
+						"type":        "string",
+						"description": "Tipo de incidente: 'CODE_INJECTION_ATTEMPT', 'SYBIL_ATTACK_DETECTED', 'DAG_IMMUTABILITY_BREACH', 'DISHONEST_AI_AGENT', 'METRIC_FALSIFICATION', 'UNAUTHORIZED_L0_MUTATION'",
+					},
+					"offender_did": map[string]interface{}{
+						"type":        "string",
+						"description": "DID de la entidad atacante",
+					},
+					"evidence": map[string]interface{}{
+						"type":        "string",
+						"description": "Prueba o traza del incidente",
+					},
+				},
+				"required": []string{"incident", "offender_did", "evidence"},
 			},
 		},
 	}
@@ -891,6 +1012,101 @@ func (s *MCPServer) ExecuteTool(name string, args map[string]interface{}) (strin
 			"timestamp":   time.Now().UTC(),
 		}
 		data, _ := json.MarshalIndent(res, "", "  ")
+		return string(data), nil
+
+	case "ipvn7_constitution_verify":
+		code, _ := args["code"].(string)
+		targetID, _ := args["target_id"].(string)
+		if code == "" {
+			return "", fmt.Errorf("parámetro 'code' requerido")
+		}
+		if s.Constitution == nil {
+			s.Constitution = NewConstitutionalVerifier(s.Identity)
+		}
+		report, err := s.Constitution.VerifyCode(code, targetID)
+		if err != nil {
+			return "", fmt.Errorf("error verificando código: %w", err)
+		}
+		data, _ := json.MarshalIndent(report, "", "  ")
+		return string(data), nil
+
+	case "ipvn7_senate_propose":
+		if s.Senate == nil {
+			return "", fmt.Errorf("subsistema del Senado de Agentes no inicializado")
+		}
+		title, _ := args["title"].(string)
+		desc, _ := args["description"].(string)
+		catStr, _ := args["category"].(string)
+		code, _ := args["source_code"].(string)
+		if title == "" || code == "" {
+			return "", fmt.Errorf("parámetros 'title' y 'source_code' requeridos")
+		}
+		cat := ProposalCategory(catStr)
+		if cat == "" {
+			cat = CategoryRoutingOptimization
+		}
+		prop, err := s.Senate.SubmitProposal(title, desc, cat, code)
+		if err != nil {
+			return "", fmt.Errorf("propuesta rechazada: %w", err)
+		}
+		data, _ := json.MarshalIndent(prop, "", "  ")
+		return string(data), nil
+
+	case "ipvn7_senate_vote":
+		if s.Senate == nil {
+			return "", fmt.Errorf("subsistema del Senado de Agentes no inicializado")
+		}
+		propID, _ := args["proposal_id"].(string)
+		stanceStr, _ := args["stance"].(string)
+		just, _ := args["justification"].(string)
+		if propID == "" || stanceStr == "" {
+			return "", fmt.Errorf("parámetros 'proposal_id' y 'stance' requeridos")
+		}
+		vote, err := s.Senate.CastAgentVote(propID, StanceType(stanceStr), just)
+		if err != nil {
+			return "", fmt.Errorf("error emitiendo voto: %w", err)
+		}
+		data, _ := json.MarshalIndent(vote, "", "  ")
+		return string(data), nil
+
+	case "ipvn7_senate_morning_report":
+		if s.Senate == nil {
+			return "", fmt.Errorf("subsistema del Senado de Agentes no inicializado")
+		}
+		report := s.Senate.GenerateMorningReport()
+		data, _ := json.MarshalIndent(report, "", "  ")
+		return string(data), nil
+
+	case "ipvn7_sentinel_audit":
+		if s.Sentinel == nil {
+			return "", fmt.Errorf("subsistema de Inmunología Centinela no inicializado")
+		}
+		targetDID, _ := args["target_did"].(string)
+		if targetDID == "" {
+			return "", fmt.Errorf("parámetro 'target_did' requerido")
+		}
+		chal, err := s.Sentinel.IssueAuditChallenge(targetDID)
+		if err != nil {
+			return "", fmt.Errorf("error emitiendo desafío: %w", err)
+		}
+		data, _ := json.MarshalIndent(chal, "", "  ")
+		return string(data), nil
+
+	case "ipvn7_sentinel_report_incident":
+		if s.Sentinel == nil {
+			return "", fmt.Errorf("subsistema de Inmunología Centinela no inicializado")
+		}
+		incStr, _ := args["incident"].(string)
+		offender, _ := args["offender_did"].(string)
+		evid, _ := args["evidence"].(string)
+		if offender == "" || evid == "" {
+			return "", fmt.Errorf("parámetros 'offender_did' y 'evidence' requeridos")
+		}
+		alert, err := s.Sentinel.EmitImmunologicalAlert(l2.IncidentType(incStr), offender, evid)
+		if err != nil {
+			return "", fmt.Errorf("error emitiendo alerta inmunológica: %w", err)
+		}
+		data, _ := json.MarshalIndent(alert, "", "  ")
 		return string(data), nil
 
 	default:

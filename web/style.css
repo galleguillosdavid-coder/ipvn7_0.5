@@ -3863,5 +3863,123 @@ body[data-operating-level="7"] {
   transform: translateY(-1px);
 }
 
+/* ==========================================================================
+   CIBER-REPÚBLICA: SENADO DE AGENTES, CENTINELAS Y CONSTITUCIÓN (docs/3.md)
+   ========================================================================== */
+.corporate-vpn-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(3, 7, 18, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  animation: fadeInModal 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.corporate-vpn-modal-card {
+  width: 95vw;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.85);
+  padding: 24px;
+  position: relative;
+}
+
+.vpn-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+}
+
+.vpn-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vpn-tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.82rem;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.vpn-tab-btn:hover {
+  color: #fff;
+}
+
+.vpn-tab-btn.active {
+  color: #00f0ff;
+  border-bottom-color: #00f0ff;
+}
+
+.proposal-item-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.proposal-item-card:hover {
+  border-color: rgba(168, 85, 247, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.vote-tally-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  display: flex;
+  margin: 8px 0;
+}
+
+.vote-tally-support {
+  background: #10b981;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.vote-tally-oppose {
+  background: #ef4444;
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.sentinel-alert-box {
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.constitution-quote {
+  border-left: 3px solid #00f0ff;
+  padding-left: 12px;
+  font-style: italic;
+  color: #e2e8f0;
+  margin: 10px 0;
+}
+
 
 

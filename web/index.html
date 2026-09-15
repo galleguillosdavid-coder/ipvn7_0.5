@@ -41,6 +41,18 @@
           <span class="vpn-header-text">VPN Fricción Cero</span>
           <span class="vpn-pill-dot pulsing"></span>
         </button>
+        <button class="vpn-header-pill" onclick="openSenateModal()" title="Senado de Agentes IA y Democracia Líquida (docs/3.md)" style="border-color: rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.08);">
+          <span class="vpn-header-icon">🏛️</span>
+          <span class="vpn-header-text" style="color: #c084fc;">Senado IA</span>
+        </button>
+        <button class="vpn-header-pill" onclick="openSentinelModal()" title="Sistema Inmunológico Celular y Red de Centinelas" style="border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.08);">
+          <span class="vpn-header-icon">🛡️</span>
+          <span class="vpn-header-text" style="color: #f87171;">Centinelas</span>
+        </button>
+        <button class="vpn-header-pill" onclick="openConstitutionModal()" title="Constitución Inmutable de la Ciber-República" style="border-color: rgba(0, 240, 255, 0.4); background: rgba(0, 240, 255, 0.08);">
+          <span class="vpn-header-icon">📜</span>
+          <span class="vpn-header-text" style="color: #00f0ff;">Constitución</span>
+        </button>
         <div class="node-pill">
           <span class="status-dot pulsing"></span>
           <span id="node-env">WSL2 Linux Kernel Node</span>
@@ -142,6 +154,28 @@
             <h3>Reconexión Automática</h3>
             <p>Si se corta la luz o cae internet, activa la búsqueda de vecinos para reconectar la red de inmediato.</p>
             <button class="btn-human-action" id="btnHumanRecover">Probar Reconexión</button>
+          </div>
+
+          <!-- Tarjeta 7: Senado de Agentes -->
+          <div class="human-card card-senate" onclick="openSenateModal()" style="border-color: rgba(168, 85, 247, 0.3);">
+            <div class="human-card-header">
+              <span class="human-card-emoji">🏛️</span>
+              <span class="human-card-badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc;">Democracia Líquida</span>
+            </div>
+            <h3>Senado de Agentes IA</h3>
+            <p>Tu agente analiza parches técnicos y vota mientras duermes. Puedes revisar su reporte y vetar en 1 clic.</p>
+            <button class="btn-human-action" style="border-color: #a855f7; color: #c084fc;">Ver Ágora y Reporte</button>
+          </div>
+
+          <!-- Tarjeta 8: Sistema Inmunológico Celular -->
+          <div class="human-card card-sentinel" onclick="openSentinelModal()" style="border-color: rgba(239, 68, 68, 0.3);">
+            <div class="human-card-header">
+              <span class="human-card-emoji">🛡️</span>
+              <span class="human-card-badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">Inmunidad Celular</span>
+            </div>
+            <h3>Red de Centinelas</h3>
+            <p>Vigilancia cruzada entre nodos: detecta y expulsa agentes deshonestos o intentos de inyección de código.</p>
+            <button class="btn-human-action" style="border-color: #ef4444; color: #f87171;">Ver Estado Inmunológico</button>
           </div>
         </div>
 
@@ -2339,6 +2373,226 @@
         <div class="vpn-footer-toolbar">
           <span style="font-size: 0.74rem; color: var(--text-muted);">La sonda no recopila direcciones IP públicas, URLs privadas ni historiales de navegación.</span>
           <button class="btn-chat-icon" onclick="closeNetworkProbeModal()" style="font-size: 0.82rem; color: var(--text-muted);">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- MODAL 1: SENADO DE AGENTES & DEMOCRACIA LÍQUIDA (docs/3.md)          -->
+    <!-- ==================================================================== -->
+    <div class="corporate-vpn-modal-backdrop" id="senateModal" style="display: none;">
+      <div class="corporate-vpn-modal-card glass-card" style="max-width: 860px; max-height: 88vh; overflow-y: auto;">
+        <div class="vpn-modal-header">
+          <div class="vpn-modal-title-group">
+            <span style="font-size: 1.5rem;">🏛️</span>
+            <div>
+              <h2 style="margin: 0; font-size: 1.25rem; color: #fff;">Senado de Agentes & Ágora Cívica</h2>
+              <span style="font-size: 0.76rem; color: #c084fc;">Democracia Líquida Asistida por IA · Gobernanza Anti-Plutocrática (Proof-of-Contribution)</span>
+            </div>
+          </div>
+          <button class="btn-chat-icon" onclick="closeSenateModal()" style="font-size: 1.2rem; color: var(--text-muted);">✕</button>
+        </div>
+
+        <div style="display: flex; gap: 8px; margin: 14px 0 16px 0; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
+          <button class="level-pill active" id="tabSenateMorning" onclick="switchSenateTab('morning')">☀️ Reporte Matutino (Supervisión Humana)</button>
+          <button class="level-pill" id="tabSenateDebates" onclick="switchSenateTab('debates')">💬 Debates Activos</button>
+          <button class="level-pill" id="tabSenateNew" onclick="switchSenateTab('new')">➕ Crear Propuesta</button>
+        </div>
+
+        <!-- Pestaña Reporte Matutino -->
+        <div id="senateTabContentMorning">
+          <div class="vpn-status-summary-bar" style="border-color: rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.06); margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 1.2rem;">☕</span>
+              <div>
+                <strong style="color: #fff; font-size: 0.9rem;" id="morningReportHeadline">Reporte Matutino del Agente</strong>
+                <div style="font-size: 0.76rem; color: var(--text-muted);" id="morningReportSub">Decisiones automáticas tomadas por tu IA local vinculadas al rendimiento de tu hardware</div>
+              </div>
+            </div>
+            <button class="btn-primary btn-det" onclick="refreshSenateMorningReport()" style="font-size: 0.74rem;">Actualizar Reporte</button>
+          </div>
+
+          <div id="morningDecisionsList" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Contenido dinámico -->
+          </div>
+        </div>
+
+        <!-- Pestaña Debates Activos -->
+        <div id="senateTabContentDebates" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Propuestas sometidas a escrutinio constitucional y auditoría técnica:</span>
+            <button class="btn-primary btn-det" onclick="loadSenateProposals()" style="font-size: 0.74rem;">Refrescar Ágora</button>
+          </div>
+          <div id="senateProposalsList" style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Contenido dinámico -->
+          </div>
+        </div>
+
+        <!-- Pestaña Nueva Propuesta -->
+        <div id="senateTabContentNew" style="display: none;">
+          <div class="vpn-form-group" style="margin-bottom: 10px;">
+            <label style="font-size: 0.8rem; color: var(--text-muted);">Título de la Propuesta:</label>
+            <input type="text" id="newPropTitle" class="input-peer-address" placeholder="Ej: Optimización de búferes zero-copy para enlaces 5G" style="width: 100%;">
+          </div>
+          <div class="vpn-form-group" style="margin-bottom: 10px;">
+            <label style="font-size: 0.8rem; color: var(--text-muted);">Categoría Técnica:</label>
+            <select id="newPropCategory" class="audio-station-select" style="width: 100%;">
+              <option value="ROUTING_OPTIMIZATION">Optimización de Enrutamiento (ROUTING_OPTIMIZATION)</option>
+              <option value="SECURITY_PATCH">Parche de Seguridad Cero-Trust (SECURITY_PATCH)</option>
+              <option value="RESOURCE_POLICY">Política de Recursos / Memoria (RESOURCE_POLICY)</option>
+              <option value="CONSTITUTIONAL_AUDIT">Auditoría Constitucional (CONSTITUTIONAL_AUDIT)</option>
+            </select>
+          </div>
+          <div class="vpn-form-group" style="margin-bottom: 10px;">
+            <label style="font-size: 0.8rem; color: var(--text-muted);">Descripción / Justificación:</label>
+            <input type="text" id="newPropDesc" class="input-peer-address" placeholder="Detalle técnico del impacto esperado" style="width: 100%;">
+          </div>
+          <div class="vpn-form-group" style="margin-bottom: 14px;">
+            <label style="font-size: 0.8rem; color: var(--text-muted);">Código Fuente o Parche (Sujeto a verificación del Artículo I):</label>
+            <textarea id="newPropCode" class="input-peer-address" rows="6" placeholder="// Código Go a ser auditado por el Verificador Constitucional..." style="width: 100%; font-family: var(--font-mono); font-size: 0.78rem;"></textarea>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 8px;">
+            <button class="btn-primary btn-det" onclick="submitSenateProposal()" style="border-color: #a855f7; color: #c084fc;">Auditar & Enviar al Senado</button>
+          </div>
+          <div id="newPropResultMsg" style="margin-top: 10px; font-size: 0.8rem;"></div>
+        </div>
+
+        <div class="vpn-footer-toolbar" style="margin-top: 18px;">
+          <span style="font-size: 0.74rem; color: var(--text-muted);">El peso de cada voto proviene del Proof-of-Contribution real del hardware. Prohibida la plutocracia.</span>
+          <button class="btn-chat-icon" onclick="closeSenateModal()" style="font-size: 0.82rem; color: var(--text-muted);">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- MODAL 2: SISTEMA INMUNOLÓGICO CELULAR & RED DE CENTINELAS            -->
+    <!-- ==================================================================== -->
+    <div class="corporate-vpn-modal-backdrop" id="sentinelModal" style="display: none;">
+      <div class="corporate-vpn-modal-card glass-card" style="max-width: 860px; max-height: 88vh; overflow-y: auto;">
+        <div class="vpn-modal-header">
+          <div class="vpn-modal-title-group">
+            <span style="font-size: 1.5rem;">🛡️</span>
+            <div>
+              <h2 style="margin: 0; font-size: 1.25rem; color: #fff;">Sistema Inmunológico Celular & Red de Centinelas</h2>
+              <span style="font-size: 0.76rem; color: #f87171;">Vigilancia Cruzada (Cross-Auditing) · Alertas Inmunológicas por Quórum · Slashing Definitivo</span>
+            </div>
+          </div>
+          <button class="btn-chat-icon" onclick="closeSentinelModal()" style="font-size: 1.2rem; color: var(--text-muted);">✕</button>
+        </div>
+
+        <!-- Indicadores de Salud Inmunológica -->
+        <div class="probe-stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-top: 12px;">
+          <div class="probe-stat-card">
+            <span class="probe-stat-label">Células Centinela</span>
+            <span class="probe-stat-val" id="sentinelActiveCount">1 Local</span>
+            <span style="font-size: 0.7rem; color: #10b981;">Enjambre Autónomo</span>
+          </div>
+          <div class="probe-stat-card">
+            <span class="probe-stat-label">Auditorías Cruzadas</span>
+            <span class="probe-stat-val" id="sentinelTotalAudits">0</span>
+            <span style="font-size: 0.7rem; color: #00f0ff;">Desafíos Sandbox</span>
+          </div>
+          <div class="probe-stat-card">
+            <span class="probe-stat-label">Alertas Inmunológicas</span>
+            <span class="probe-stat-val" id="sentinelAlertsCount">0</span>
+            <span style="font-size: 0.7rem; color: #f59e0b;">Quórum Req: 2</span>
+          </div>
+          <div class="probe-stat-card">
+            <span class="probe-stat-label">DIDs Neutralizados</span>
+            <span class="probe-stat-val" id="sentinelNeutralizedCount" style="color: #ef4444;">0</span>
+            <span style="font-size: 0.7rem; color: #ef4444;">Expulsión Perpetua</span>
+          </div>
+        </div>
+
+        <!-- Disparador de Auditoría Cruzada Manual -->
+        <div class="vpn-status-summary-bar" style="border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.05); margin-top: 14px;">
+          <div style="flex: 1;">
+            <strong style="color: #fff; font-size: 0.86rem;">Emitir Desafío de Auditoría Cruzada a Nodo Vecino:</strong>
+            <div style="display: flex; gap: 8px; margin-top: 6px;">
+              <input type="text" id="targetAuditDID" class="input-peer-address" placeholder="did:ipvn7:uin:..." style="flex: 1;">
+              <button class="btn-primary btn-det" onclick="executeSentinelAudit()" style="border-color: #ef4444; color: #f87171;">Auditar Sandbox Par</button>
+            </div>
+            <div id="sentinelAuditResult" style="font-size: 0.76rem; margin-top: 6px;"></div>
+          </div>
+        </div>
+
+        <!-- Feed de Alertas Inmunológicas -->
+        <div style="margin-top: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong style="color: #fff; font-size: 0.85rem;">Alertas Inmunológicas en el Enjambre:</strong>
+            <button class="btn-primary btn-det" onclick="loadSentinelData()" style="font-size: 0.72rem; padding: 3px 8px;">Refrescar Alertas</button>
+          </div>
+          <div id="sentinelAlertsList" style="display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto;">
+            <!-- Contenido dinámico -->
+          </div>
+        </div>
+
+        <!-- Lista de DIDs Neutralizados -->
+        <div style="margin-top: 16px;">
+          <strong style="color: #fff; font-size: 0.85rem;">Identidades Sancionadas y Bloqueadas de por Vida (Slashing):</strong>
+          <div id="sentinelBannedList" style="margin-top: 6px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 8px; font-family: var(--font-mono); font-size: 0.76rem; color: #ef4444;">
+            Ninguna identidad maliciosa neutralizada hasta el momento. Red en estado puro.
+          </div>
+        </div>
+
+        <div class="vpn-footer-toolbar" style="margin-top: 18px;">
+          <span style="font-size: 0.74rem; color: var(--text-muted);">Todo nodo es un centinela activo. La seguridad de la red es una propiedad celular emergente.</span>
+          <button class="btn-chat-icon" onclick="closeSentinelModal()" style="font-size: 0.82rem; color: var(--text-muted);">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- MODAL 3: CONSTITUCIÓN DIGITAL INMUTABLE (docs/3.md)                  -->
+    <!-- ==================================================================== -->
+    <div class="corporate-vpn-modal-backdrop" id="constitutionModal" style="display: none;">
+      <div class="corporate-vpn-modal-card glass-card" style="max-width: 780px; max-height: 85vh; overflow-y: auto;">
+        <div class="vpn-modal-header">
+          <div class="vpn-modal-title-group">
+            <span style="font-size: 1.5rem;">📜</span>
+            <div>
+              <h2 style="margin: 0; font-size: 1.25rem; color: #fff;">Constitución de la Ciber-República de ipvn7</h2>
+              <span style="font-size: 0.76rem; color: #00f0ff;">Piedra Angular Fundacional · Blindaje Criptográfico Inmutable</span>
+            </div>
+          </div>
+          <button class="btn-chat-icon" onclick="closeConstitutionModal()" style="font-size: 1.2rem; color: var(--text-muted);">✕</button>
+        </div>
+
+        <div style="background: rgba(0, 240, 255, 0.04); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 8px; padding: 16px; margin: 14px 0;">
+          <h3 style="color: #00f0ff; margin-top: 0; font-size: 0.95rem;">Artículo I: De la Soberanía Absoluta, la Privacidad y la Anti-Plutocracia</h3>
+          <blockquote style="margin: 8px 0 14px 0; border-left: 3px solid #00f0ff; padding-left: 10px; font-style: italic; color: #e2e8f0; font-size: 0.86rem;">
+            "La red existe para servir a sus usuarios, no para extraer valor de ellos; su poder de decisión emana exclusivamente del esfuerzo físico y la contribución real, y su núcleo de privacidad es inviolable."
+          </blockquote>
+
+          <div style="margin-bottom: 12px;">
+            <strong style="color: #38bdf8; font-size: 0.82rem;">Cláusula 1 (Soberanía y Privacidad por Diseño):</strong>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 4px 0;">Ningún nodo intermediario, entidad corporativa ni autoridad externa podrá interceptar, leer, monetizar, registrar o alterar los paquetes semánticos que transiten entre los usuarios de ipvn7. La privacidad no es una opción de configuración, sino una ley inquebrantable de la arquitectura Zero-Trust.</p>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <strong style="color: #38bdf8; font-size: 0.82rem;">Cláusula 2 (Prohibición de la Plutocracia):</strong>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 4px 0;">El peso de gobernanza y la capacidad de voto dentro del protocolo no podrán ser comprados, acumulados ni influenciados mediante capital financiero, criptomonedas especulativas o tenencia de activos. Toda autoridad de decisión nace única y exclusivamente del Proof-of-Contribution (estabilidad, enrutamiento útil y procesamiento compartido).</p>
+          </div>
+
+          <div>
+            <strong style="color: #38bdf8; font-size: 0.82rem;">Cláusula 3 (Inmutabilidad del Núcleo Constitucional):</strong>
+            <p style="font-size: 0.78rem; color: var(--text-muted); margin: 4px 0;">Las reglas fundamentales que garantizan la descentralización, la resistencia a la censura y la soberanía del usuario están blindadas criptográficamente. Ninguna votación de la red podrá vulnerar los principios de este Artículo I ni alterar el Core Freeze L0 (Ed25519, Kyber PQC, CBOR canónico determinista).</p>
+          </div>
+        </div>
+
+        <!-- Probador en Vivo del Verificador Constitucional -->
+        <div style="margin-top: 14px;">
+          <strong style="color: #fff; font-size: 0.84rem;">Prueba en Vivo del Verificador Constitucional (`pkg/l3/constitutional_verifier.go`):</strong>
+          <textarea id="constTestCodeInput" class="input-peer-address" rows="3" style="width: 100%; margin-top: 6px; font-family: var(--font-mono); font-size: 0.76rem;" placeholder="// Pega un fragmento de código Go para comprobar si viola el Artículo I..."></textarea>
+          <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+            <button class="btn-primary btn-det" onclick="testConstitutionVerifier()" style="font-size: 0.74rem;">Auditar Código</button>
+          </div>
+          <div id="constTestResultBox" style="margin-top: 8px; font-size: 0.78rem;"></div>
+        </div>
+
+        <div class="vpn-footer-toolbar" style="margin-top: 16px;">
+          <span style="font-size: 0.74rem; color: var(--text-muted);">Inmutabilidad matemática certificada por hash SHA-256 y firma digital Ed25519.</span>
+          <button class="btn-chat-icon" onclick="closeConstitutionModal()" style="font-size: 0.82rem; color: var(--text-muted);">Cerrar</button>
         </div>
       </div>
     </div>

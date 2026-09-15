@@ -61,6 +61,9 @@ type WebDashboardServer struct {
 	AudioRadio    *AudioRadioManager
 	Probe         *l1.NetworkProbeEngine
 	Blackout      *l1.BlackoutRecoveryManager
+	Constitution  *l3.ConstitutionalVerifier
+	Senate        *l3.AgentSenateEngine
+	Sentinel      *l2.SentinelImmunologyEngine
 	CopilotMode   string
 	StartTime     time.Time
 	StaticDir     string
@@ -111,6 +114,21 @@ func NewWebDashboardServer(
 	_, _ = semantic.SignAndRegister(id, []string{"geo/lan", "role/router", "service/ipvn7"}, "Nodo Base ipvn7", 100.0)
 
 	dagStore := l1.NewDAGStore(id)
+	accounting := l2.NewTransitAccounting()
+	wot := l1.NewWebOfTrust()
+	constVerifier := l3.NewConstitutionalVerifier(id)
+	senate := l3.NewAgentSenateEngine(id, constVerifier, dagStore, wot, accounting)
+	sentinel := l2.NewSentinelImmunologyEngine(id, fw, accounting, wot)
+
+	// Pre-cargar propuesta de demostración inicial en el Senado de Agentes
+	demoCode := `package main
+// Optimización determinista de rutas eBPF en caliente
+func optimizeHop() { /* 0 alocaciones */ }`
+	demoProp, _ := senate.SubmitProposal("Optimización eBPF FastPath v2", "Reduce latencia de conmutación en un 18% para el anillo 0", l3.CategoryRoutingOptimization, demoCode)
+	if demoProp != nil {
+		_, _ = senate.AddArgument(demoProp.ID, l3.StanceSupport, l3.TechnicalMetrics{BandwidthSavingsPct: 18.4, LatencyImpactMs: -2.3, MemoryDeltaMB: -1.2, SandboxStatus: "PASSED"}, "Verificado en sandbox local. Cumple al 100% con el Artículo I.")
+		_, _ = senate.CastAgentVote(demoProp.ID, l3.StanceSupport, "Voto emitido automáticamente por el agente: reducción neta de latencia y cero llamadas de telemetría.")
+	}
 
 	return &WebDashboardServer{
 		Port:          port,
@@ -123,8 +141,8 @@ func NewWebDashboardServer(
 		BufferPool:    l1.NewBufferPool(),       // Zero-Copy 3-tier pool (Dimensión 12)
 		QoS:           l1.NewQoSManager(),       // Token Bucket & Anti-DDoS PoW (Dimensión 3)
 		DAGStore:      dagStore,                 // Almacén DAG y DTN Store-and-Forward (Dimensión 4)
-		Accounting:    l2.NewTransitAccounting(), // Economía Tit-for-Tat (Dimensión 5)
-		WoT:           l1.NewWebOfTrust(),       // Web-of-Trust y Reputación Atenuada (Dimensión 9)
+		Accounting:    accounting,               // Economía Tit-for-Tat (Dimensión 5)
+		WoT:           wot,                      // Web-of-Trust y Reputación Atenuada (Dimensión 9)
 		Petnames:      NewPetnameResolver(),     // dDNS Petnames locales (Dimensión 2)
 		SmartPackets:  l1.NewSmartPacketPipeline(), // Smart Packets con sandbox Wazero (Dimensión 7)
 		Multipath:     mp,
@@ -153,6 +171,9 @@ func NewWebDashboardServer(
 		AudioRadio:    NewAudioRadioManager(id),
 		Probe:         l1.NewNetworkProbeEngine(id, router),
 		Blackout:      l1.NewBlackoutRecoveryManager(id, l1.NewBlindRendezvousManager(id, l1.NewHybridBlindBeaconStore(""), "ipvn7-sovereign-v0.5")),
+		Constitution:  constVerifier,
+		Senate:        senate,
+		Sentinel:      sentinel,
 		CopilotMode:   "off",
 		StartTime:     time.Now(),
 		StaticDir:     staticDir,
@@ -280,6 +301,18 @@ func (ws *WebDashboardServer) Start() error {
 
 	// Endpoint Control de Gobernanza de IA Opcional (Zero Token Drain)
 	mux.HandleFunc("/api/copilot/mode", ws.handleCopilotMode)
+
+	// Endpoints Ciber-República, Senado de Agentes y Centinelas (docs/3.md)
+	mux.HandleFunc("/api/constitution/text", ws.handleConstitutionText)
+	mux.HandleFunc("/api/constitution/verify", ws.handleConstitutionVerify)
+	mux.HandleFunc("/api/senate/proposals", ws.handleSenateProposals)
+	mux.HandleFunc("/api/senate/vote", ws.handleSenateVote)
+	mux.HandleFunc("/api/senate/morning-report", ws.handleSenateMorningReport)
+	mux.HandleFunc("/api/senate/veto", ws.handleSenateVeto)
+	mux.HandleFunc("/api/sentinel/status", ws.handleSentinelStatus)
+	mux.HandleFunc("/api/sentinel/audit", ws.handleSentinelAudit)
+	mux.HandleFunc("/api/sentinel/alerts", ws.handleSentinelAlerts)
+	mux.HandleFunc("/api/sentinel/report", ws.handleSentinelReport)
 
 	// 2. Archivos estáticos de interfaz gráfica
 	fs := http.FileServer(http.Dir(ws.StaticDir))
@@ -2280,6 +2313,240 @@ func (ws *WebDashboardServer) handleBlackoutCascade(w http.ResponseWriter, r *ht
 		"converged":     directPeers >= 2,
 	})
 }
+
+// -----------------------------------------------------------------------------
+// Handlers para Constitución Digital, Senado de Agentes y Centinelas (docs/3.md)
+// -----------------------------------------------------------------------------
+
+func (ws *WebDashboardServer) handleConstitutionText(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":     true,
+		"title":       "Constitución de la Ciber-República de ipvn7",
+		"article_1":   ws.Constitution.GetConstitutionText(),
+		"invariants":  []string{"Soberanía y Privacidad Zero-Trust", "Prohibición de Plutocracia (Proof-of-Contribution)", "Inmutabilidad del Core Freeze L0"},
+		"auditor_did": ws.Identity.DID(),
+	})
+}
+
+func (ws *WebDashboardServer) handleConstitutionVerify(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Code     string `json:"code"`
+		TargetID string `json:"target_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	report, err := ws.Constitution.VerifyCode(req.Code, req.TargetID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"report":  report,
+	})
+}
+
+func (ws *WebDashboardServer) handleSenateProposals(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method == http.MethodPost {
+		var req struct {
+			Title       string `json:"title"`
+			Description string `json:"description"`
+			Category    string `json:"category"`
+			SourceCode  string `json:"source_code"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		cat := l3.ProposalCategory(req.Category)
+		if cat == "" {
+			cat = l3.CategoryRoutingOptimization
+		}
+		prop, err := ws.Senate.SubmitProposal(req.Title, req.Description, cat, req.SourceCode)
+		if err != nil {
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"error":   err.Error(),
+			})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success":  true,
+			"proposal": prop,
+		})
+		return
+	}
+
+	proposals := ws.Senate.ListProposals()
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":   true,
+		"count":     len(proposals),
+		"proposals": proposals,
+	})
+}
+
+func (ws *WebDashboardServer) handleSenateVote(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		ProposalID    string `json:"proposal_id"`
+		Stance        string `json:"stance"`
+		Justification string `json:"justification"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	vote, err := ws.Senate.CastAgentVote(req.ProposalID, l3.StanceType(req.Stance), req.Justification)
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"vote":    vote,
+	})
+}
+
+func (ws *WebDashboardServer) handleSenateMorningReport(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	report := ws.Senate.GenerateMorningReport()
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"report":  report,
+	})
+}
+
+func (ws *WebDashboardServer) handleSenateVeto(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		ProposalID string `json:"proposal_id"`
+		Reason     string `json:"reason"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err := ws.Senate.SovereignHumanVeto(req.ProposalID, req.Reason)
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Veto Soberano Humano aplicado exitosamente",
+	})
+}
+
+func (ws *WebDashboardServer) handleSentinelStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	stats := ws.Sentinel.GetStats()
+	alerts := ws.Sentinel.GetActiveAlerts()
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"stats":   stats,
+		"alerts":  alerts,
+	})
+}
+
+func (ws *WebDashboardServer) handleSentinelAudit(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		TargetDID string `json:"target_did"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	chal, err := ws.Sentinel.IssueAuditChallenge(req.TargetDID)
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":   true,
+		"challenge": chal,
+	})
+}
+
+func (ws *WebDashboardServer) handleSentinelAlerts(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	alerts := ws.Sentinel.GetActiveAlerts()
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"count":   len(alerts),
+		"alerts":  alerts,
+	})
+}
+
+func (ws *WebDashboardServer) handleSentinelReport(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Incident string `json:"incident"`
+		Offender string `json:"offender_did"`
+		Evidence string `json:"evidence"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	alert, err := ws.Sentinel.EmitImmunologicalAlert(l2.IncidentType(req.Incident), req.Offender, req.Evidence)
+	if err != nil {
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   err.Error(),
+		})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"alert":   alert,
+	})
+}
+
 
 
 
